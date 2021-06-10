@@ -1,18 +1,31 @@
+"""
+This module provides some classical electronic circuits as functions and the sensor membrane
+
+"""
+
+
 from math import pi, asin
 
 class Membrane:
     """
-        Sensor membrane
+        Sensor membrane : (formulas from wikipedia and Capteurs : Pressions, accélération et forces à pont de Wheastone, Jean Louis Rouvet - Giacintec)
+            Simulate membrane sensor for input pressure
+            - Use compute_force to get the force applied on the surface
+            - Use compute_def_z to get z displacement
+            - Use get_def_x to get x elongation.
 
         Params :
             - E : environment object
             - EIgz : Young modulus x Igz
             - diameter : diameter of the membrane
             - P_calib : static pressure on the other side of the membrane
+            - e : thickness (m) (default : 1e-5)
+            - Y : young modulus (Pa)
+            - alpha : time inertia coefficient (simulate delay)
 
     """
     # https://fr.wikipedia.org/wiki/Th%C3%A9orie_des_poutres
-    def __init__(self,E , EIgz, diameter, P_calib, e = 1e-3, Y = 130e9, alpha = 0.4):
+    def __init__(self,E , EIgz, diameter, P_calib, e = 1e-5, Y = 130e9, alpha = 0.4):
         self.E = E
         self.Y = Y
         self.EIgz = EIgz
@@ -38,6 +51,9 @@ class Membrane:
         return (self.L_def-self.L)/self.L
 
     def compute_def_x(self,):
+        """
+        
+        """
         y = self.compute_def_z()
 
         L_def = 2*(y**2+self.L**2/4)**.5
@@ -52,11 +68,28 @@ class Membrane:
 
 
 def wheastone(V_0, R1,R2,R3,R4):
+    """
+    Wheastone formula function
+
+    Params : 
+        - V_0 working voltage
+        - R1, R2, R3, R4 the resistances
+    """
 
     Vs = V_0 * (R4/(R1+R4)-R3/(R2+R3))
 
     return Vs
 
 def montage_ampli_op(V1,V2,R1,R2,R3,R4):
+
+    """
+    amplification stage of the sensor.
+    Here a substractor AOP is coded
+
+    Params : 
+        - V_1, V_2 input voltage
+        - R1, R2, R3, R4 the resistances
+    """
+
     Vs = (R1+R2)/R1 * R4/(R3+R4) * V2 - R2/R1*V1
     return Vs

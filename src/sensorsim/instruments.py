@@ -1,10 +1,10 @@
+"""
+This module provides all the instruments
+"""
+
 from random import random
 from math import pi, asin
 
-
-# def jauge (pression_ambiante, k, v_alim, R_eq):
-#     dR = k*pression_ambiante
-#     v_sortie = 2*dR/R* v_alim
 
 class Environment:
     """
@@ -43,6 +43,7 @@ class Resistance:
     Object Resistance : simulate a electrical resistance with noise, temperature and strength effect
     The resistance can be used as a classical resistance or attached to an object to measure deformation.
     For this use the attach_membrane method
+    To get the resistance value, use .get_resistance method at each step you want to perform a measure/calculus.
 
     Params : 
     - E : environement object
@@ -84,6 +85,11 @@ class Resistance:
     #     self.T = T 
     
     def get_resistance(self): 
+        """
+        Get resistance value
+        Params :
+            - No params
+        """
         if self.membrane != None:
             self.set_deformation( self.side*(self.membrane.get_def_x()-self.membrane.L))
         return self.compute_R() 
@@ -94,19 +100,31 @@ class Generateur:
     
     Params : 
         - v_alim : output voltage
-        - bruit : noise 
+        - noise : noise (default : 1e-3)
     """
-    def __init__(self, v_alim, bruit=1e-3):
+    def __init__(self, v_alim, noise=1e-3):
         self.v_alim = v_alim
-        self.bruit = bruit
+        self.noise = noise
 
     def get_v_alim(self):
-        return self.v_alim *(1+ self.bruit*(2*random()-1) )
+        return self.v_alim *(1+ self.noise*(2*random()-1) )
 
 
 
 
 class Horloge: 
+    """
+        This object is simulating a clock.
+        Usage : declare it and link it with your environment object
+        The clock object is auto updating.
+        To get clock state (True/False value), use get_pulse or get_clock
+
+        Params : 
+            - E : environment object
+            - frequence : frequency
+            - granularity_env_time : granularity of the time in the environmnent object (ex: your step time is 0.1 sec)
+    """
+
     def __init__(self, E, frequence, granularity_env_time):
         self.E = E
         self.E.bind_to(self.update_time)
@@ -135,16 +153,28 @@ class Horloge:
 
 
     def get_pulse(self):
+        """
+        return True if there is a change level
+        """
         return self.pulse_clock
 
 
     def get_clock(self):
+        """
+        return at any moment the state of the clock
+        """
         return self.value
 
 
 class EchantillonneurBloqueur:
     """
-    DocString indispensable
+    Based on the horloge object, it blocks the input signal periodically every clock pulse x multiple.
+    To get value, use get_echantillon method
+
+    Params :
+        - horloge : clock "horloge" object
+        - multiple : number of clock pulse before blocking a new input value
+        - v_entree : input signal to block
     """
     def __init__(self, horloge, multiple, v_entree=0):
         self.horloge = horloge
@@ -153,6 +183,11 @@ class EchantillonneurBloqueur:
         self.v_bloquee = v_entree
 
     def get_echantillon(self, v_entree):
+        """
+        get blocked value of your v_entree (input signal)
+        Params :
+            - v_entree : input signal to block
+        """
         if self.horloge.get_pulse() :
             self.count += 1
         else:
@@ -165,7 +200,27 @@ class EchantillonneurBloqueur:
 
 class CanCompare():
     """
-    DocString indispensable + indiquer le type de can 
+    CAN object
+
+    Description :
+        Simulate a CAN with successive approximation technology https://en.wikipedia.org/wiki/Analog-to-digital_converter or described here in french : https://fr.wikipedia.org/wiki/Convertisseur_analogique-num%C3%A9rique
+
+    Params : 
+        - horloge : clock (horloge) object of your experiment
+        - resolution : resolution f your CAN
+        - v_alim : voltage working range of the CAN
+
+
+    Example : 
+        To make work the can, you have to 
+        1) initialise can object outside the time loop
+        inside the time loop : 
+        2) To process :
+            can.compare(signal_you_want)
+        3) To get final value (after comparison cycle)
+            can.get_v_numerisee()
+        4) To get final value (during comparison cycle)
+            can.get_v_numerisee_courante()
     """
     def __init__(self,horloge, resolution, v_alim):
         self.horloge = horloge
@@ -201,6 +256,22 @@ class CanCompare():
 
 
 class Cpu():
+    """
+    Cpu object
+
+    Description : 
+        perform more intensitve calculus. Here the altimeter formula is implemented.
+        Use check_value method for general input. It launches a two step process : correction (calibration) then compute method
+
+    Params : 
+        - E : environment object
+
+    Example :
+        inside the time loop :
+        altitude = cpu.check_value(horloge.get_pulse(), signal_from_can)
+    """
+
+
     def __init__(self,E):
         self.E = E
         self.value_can = 0
@@ -244,6 +315,46 @@ from plotly.subplots import make_subplots
 import plotly.graph_objects as go
 
 def make_plot(t, list_y, titles=(), graph_type=None, height=600, width=600, title_text="Stacked Subplots"):
+
+    """
+    Description : 
+        function for plotting simply variables as lists of numbers. The variable x is the same for all the graphics.
+        It use plotly to provide a interactive graph.
+
+    Params :
+        - t : common time value for all graphs
+        - list_y : list of y values of the different graphs to plot
+        - titles : tuple of the titles for each graphics. Warning : a lot of errors comes from list_y, titles or graph_type which do not have the same length.
+        - graph_type : True for step graph (simulate numeric value), False for spline graph (simulate analogic value)
+        - height : height of the whole generated graph
+        - width : width of the whole generated graph
+        - title_text : title of the whole generated graph
+
+    Example :
+        fig = instruments.make_plot(
+            record_time, 
+            [
+                record_L,
+                [record_R1,record_R2,record_R3,record_R4], # if you want to put several variable in one graph
+                record_cpu      
+            ], 
+            titles=(
+                "Length of membrane",
+                ("R1","R2","R3","R4"), # careful here : ()
+                'CPU'
+                ),
+                # Mettez True pour les grandeurs digitales et False pour les grandeurs continues
+            graph_type = [
+                False,
+                [False,False, False,False], # Resistance are analogic. /!\ careful here : []
+                True        # cpu output numeric values
+                ] ,
+                height = variable_number*300
+                
+                )
+    """
+
+
     rows = len(list_y)
     fig = make_subplots(rows=rows, cols=1, subplot_titles = [str(t) for t in titles])
 
