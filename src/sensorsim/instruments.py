@@ -309,7 +309,7 @@ class Cpu():
         # self.pression = self.value_can *reg[0] + reg[1] 
         # reg = [ 94.95021929  ,-626.54622693,  2315.98491463, 10241.5233834,22504.35066598]
         
-        if isinstance(self.coefficient_correction, [float, int]):
+        if isinstance(self.coefficient_correction, (float, int)):
             self.coefficient_correction = [self.coefficient_correction]
 
         if isinstance(self.coefficient_correction, list):
@@ -322,7 +322,7 @@ class Cpu():
 
         # self.pression = self.value_can**4 *reg[0] + self.value_can**3 *reg[1] +self.value_can**2 *reg[2] + self.value_can**1 *reg[3] + reg[4] 
 
-    def calibrate(coef):
+    def calibrate(self,coef):
         self.coefficient_correction = coef
 
     def compute(self):
