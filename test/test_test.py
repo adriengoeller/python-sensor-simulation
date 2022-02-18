@@ -75,5 +75,13 @@ def test_CanCompare():
     assert 1==1
 
 
+@pytest.mark.unit_test
+def test_cpu(env):
+    cpu = test.Cpu(env)
+    a = cpu.correction([1,2,3])
+
+    pass
+
+
 
 
