@@ -89,7 +89,6 @@ def compute_error(experimental, true_value):
     error = [x-y for x,y in zip(experimental, true_value)]
     return error
 
-def calibrate(v1, v2, degree):
 
 
 
