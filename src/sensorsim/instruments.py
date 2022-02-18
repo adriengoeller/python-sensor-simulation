@@ -4,6 +4,7 @@ This module provides all the instruments
 
 from random import random
 from math import pi, asin
+from numpy import ndarray
 
 from sensorsim.tools import compute_error
 
@@ -312,7 +313,7 @@ class Cpu():
         if isinstance(self.coefficient_correction, (float, int)):
             self.coefficient_correction = [self.coefficient_correction]
 
-        if isinstance(self.coefficient_correction, list):
+        if isinstance(self.coefficient_correction, (list, ndarray)):
             degree = len(self.coefficient_correction)
             self.pression = 0
             for i in range(0,degree):
