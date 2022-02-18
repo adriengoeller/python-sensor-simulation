@@ -314,8 +314,9 @@ class Cpu():
 
         if isinstance(self.coefficient_correction, list):
             degree = len(self.coefficient_correction)
+            self.pression = 0
             for i in range(0,degree):
-                self.pression = self.value_can**(degree-i) * self.coefficient_correction[i]
+                self.pression += self.value_can**(degree-i) * self.coefficient_correction[i]
 
         else:
             self.pression = self.value_can

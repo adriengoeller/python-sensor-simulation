@@ -1,4 +1,16 @@
 import pytest
+import sys
+import os
+from pathlib import Path
+
+here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+p = Path(here)
+pp = p / "src" #/"sensorsim"
+print(pp.resolve())
+sys.path.insert(0, str(pp.resolve()))
+print(sys.path)
+
+
 
 # import test
 import sensorsim.instruments as test
@@ -32,8 +44,8 @@ def test_horloge(env):
     
     assert 1==1
 
-from montages import Membrane
-from instruments import Environment, Resistance
+from sensorsim.montages import Membrane
+from sensorsim.instruments import Environment, Resistance
 
 @pytest.mark.unit_test
 def test_horloge(env):
@@ -77,8 +89,16 @@ def test_CanCompare():
 
 @pytest.mark.unit_test
 def test_cpu(env):
-    cpu = test.Cpu(env)
-    a = cpu.correction([1,2,3])
+
+    coefficient_correction = [2, 3, 4]
+
+    value_can = 2
+
+    degree = len(coefficient_correction)
+    for i in range(0,3):
+        pression = value_can**(degree-i) * coefficient_correction[i]
+
+    pression = value_can**2 *coefficient_correction[0] + value_can**1 *coefficient_correction[1] + coefficient_correction[2] 
 
     pass
 
