@@ -5,6 +5,8 @@ This module provides all the instruments
 from random import random
 from math import pi, asin
 
+from sensorsim.tools import compute_error
+
 
 class Environment:
     """
@@ -262,6 +264,7 @@ class Cpu():
     Description : 
         perform more intensitve calculus. Here the altimeter formula is implemented.
         Use check_value method for general input. It launches a two step process : correction (calibration) then compute method
+        Inside you can use method "calibrate" to add regression coefficient obtained with numpy.polyfit
 
     Params : 
         - E : environment object
@@ -277,6 +280,7 @@ class Cpu():
         self.value_can = 0
         self.time = E.time
         self.pression = 0
+        self.coefficient_correction = reg = [ 94.95021929  ,-626.54622693,  2315.98491463, 10241.5233834,22504.35066598]
 
     def check_value(self, value_eb, value_can):
 
@@ -303,8 +307,23 @@ class Cpu():
     def correction(self):
         # reg = [17905.19555648, 14468.22756158]
         # self.pression = self.value_can *reg[0] + reg[1] 
-        reg = [ 94.95021929  ,-626.54622693,  2315.98491463, 10241.5233834,22504.35066598]
-        self.pression = self.value_can**4 *reg[0] + self.value_can**3 *reg[1] +self.value_can**2 *reg[2] + self.value_can**1 *reg[3] + reg[4] 
+        # reg = [ 94.95021929  ,-626.54622693,  2315.98491463, 10241.5233834,22504.35066598]
+        
+        if isinstance(self.coefficient_correction, [float, int]):
+            self.coefficient_correction = [self.coefficient_correction]
+
+        if isinstance(self.coefficient_correction, list):
+            degree = len(self.coefficient_correction)
+            for i in range(0,len(degree)):
+                self.pression = self.value_can**(degree-i) * self.coefficient_correction[i]
+
+        else:
+            self.pression = self.value_can
+
+        # self.pression = self.value_can**4 *reg[0] + self.value_can**3 *reg[1] +self.value_can**2 *reg[2] + self.value_can**1 *reg[3] + reg[4] 
+
+    def calibrate(coef):
+        self.coefficient_correction = coef
 
     def compute(self):
         self.altitude = 288.15/0.0065*(1-(self.pression/1.013e5)**(1/5.255))
