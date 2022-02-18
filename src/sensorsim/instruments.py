@@ -181,7 +181,7 @@ class EchantillonneurBloqueur:
     """
     def __init__(self, horloge, multiple, v_entree=0):
         self.horloge = horloge
-        self.count = 0
+        self.count = multiple
         self.multiple = multiple
         self.v_bloquee = v_entree
 
@@ -195,7 +195,7 @@ class EchantillonneurBloqueur:
             self.count += 1
         else:
             pass        
-        if self.count == self.multiple :
+        if self.count >= self.multiple :
             self.v_bloquee = v_entree
             self.count = 0
         return self.v_bloquee
