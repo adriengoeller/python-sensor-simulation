@@ -13,7 +13,7 @@ __all__ = [
 
 PROJECT:str = "sensorsim"
 NAME:str = "sensorsim"
-VERSION:str = "1.0.0"
+VERSION:str = "1.1.0"
 DESCRIPTION:str = "Function collection for specific pressure sensor simulation"
 AUTHOR: str = "Adrien Goeller"
 AUTHOR_EMAIL: str = "https://github.com/adriengoeller"
