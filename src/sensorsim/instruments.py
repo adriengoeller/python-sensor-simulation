@@ -50,14 +50,19 @@ class Resistance:
     - E : environement object
     - R : resistance value in ohms
     - K : jauge effect parameter
+    - quality : quality of resistance in terms of noise : {"normal": 1e-2,"good" : 1e-3, "high" : 1e-4}
     - alpha : temperature effect
     """
 
-    def __init__(self, E, R, L = 1e-2 , K=2, alpha=0.0002): 
+    def __init__(self, E, R, L = 1e-2 , K=2, quality="good", alpha=0.0002): 
+        d_quality = {"normal": 1e-2,"good" : 1e-3, "high" : 1e-4}
+        if quality in d_quality:
+            self.eps = d_quality[quality]
+        else:
+            self.eps = 1e-3
         self.E = E
         self.R = R
         self.T = E.T 
-        self.eps = 1e-3 
         self.L = L 
         self.dL = 0 
         self.membrane = None
