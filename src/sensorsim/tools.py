@@ -24,7 +24,7 @@ def clean_none(var, var_with_none):
 import plotly.graph_objects as px
 from plotly.subplots import make_subplots
 
-import plotly.express as px
+import plotly.express as pxp
 import numpy as np
 
 
@@ -79,7 +79,7 @@ def make_histogram(error):
 
 
 
-    fig = px.histogram( x=error_for_histo,
+    fig = pxp.histogram( x=error_for_histo,
                     marginal="box" # or violin, rug
                     )
 
