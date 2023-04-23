@@ -210,7 +210,7 @@ class Recorder:
                 type_list.append(self.config_plot[v])
 
         self.fig = make_plot(
-            t=self.snap_time,
+            t=[l/1000 for l in self.snap_time],
             list_y=r_list,
             titles=tuple(title_list),
             graph_type=type_list,
@@ -417,13 +417,13 @@ class Horloge(Observer, Notifier):
         self.E = E
         self.E.bind_to(self)
         self.frequence = frequence
-        self.tf_s = 1/frequence #*granularity_env_time
+        self.tf_s = 1/frequence *granularity_env_time
         self.factor = granularity_env_time
         self.value = False
         self._time = 0
    
     def update(self, notifier):
-        self._time = notifier.time/self.factor
+        self._time = notifier.time #/self.factor
         self.update_clock()
 
     @property
@@ -432,7 +432,7 @@ class Horloge(Observer, Notifier):
 
     @property
     def pulse_clock(self):
-        return (self._time % self.tf_s == 0)
+        return (int(self._time % self.tf_s) == 0)
     
     
     def update_clock(self):
