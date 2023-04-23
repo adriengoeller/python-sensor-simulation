@@ -348,6 +348,8 @@ class Generateur:
 
     def get_v_alim(self):
         return self.v_alim *(1+ self.noise*(2*random()-1) )
+    
+    __call__ = get_v_alim
 
 
 

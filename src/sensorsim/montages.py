@@ -8,13 +8,13 @@ This module provides some classical electronic circuits as functions and the sen
 
 
 class Wheastone:
-    def __init__(self,R1,R2=2,R3=1.5,R4=.2) -> None:
+    def __init__(self,R1,R2,R3,R4) -> None:
         self.R1 = R1
         self.R2 = R2
         self.R3 = R3
         self.R4 = R4
     def wheastone(self, V_0):
-        Vs = V_0 * (self.R4/(self.R1+self.R4)-self.R3/(self.R2+self.R3))
+        Vs = V_0 * (self.R4()/(self.R1()+self.R4())-self.R3()/(self.R2()+self.R3()))
         return Vs
 
 def montage_ampli_op(V1,V2,R1,R2,R3,R4):
