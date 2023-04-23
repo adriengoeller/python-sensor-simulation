@@ -2,14 +2,91 @@
 This module provides all the instruments
 """
 
+from abc import ABC, abstractmethod
 from random import random
 from math import pi, asin
+from typing import Dict
+import warnings
 from numpy import ndarray
+import numpy as np
+
 
 from sensorsim.tools import compute_error
 
+class Notifier:
+    def __init__(self) -> None:
+        self._observers= []
 
-class Environment:
+    def bind_to(self, callback):
+        self._observers.append(callback)
+
+    def notify(self) -> None:
+        for observer in self._observers:
+            observer.update(self)
+
+
+class Observer(ABC):
+
+    @abstractmethod
+    def update(self, notifier:Notifier) -> None:
+        """
+        Receive update from subject.
+        """
+        pass
+    
+
+class TimeGenerator(Notifier): 
+    def __init__(self, duree_second, experiment_step_ms = 1000, real_time_step_ms = 10) -> None:
+        super().__init__()
+        self.current_time_index=0
+        self.tmax_second = duree_second
+        self.real_time_step_ms = real_time_step_ms
+        self._expe_step_ms = experiment_step_ms
+        self.is_exp_time = True
+        self.current_time = 0
+        self.current_time_exp_index = 0
+        
+    @property
+    def t_real(self):
+        return np.linspace(0,1000*self.tmax_second,int(1000/self.real_time_step_ms)*self.tmax_second+1) 
+
+    @property
+    def size_real(self):
+        return self.t_real.size
+    
+    @property
+    def size_exp(self):
+        return self.t_experiment.size
+
+    @property
+    def len_real(self):
+        return len(self.t_real)
+
+    @property
+    def t_experiment(self):
+        return np.linspace(0,self.tmax_second*1000,int(1000/(self._expe_step_ms)*self.tmax_second)+1) 
+
+    @property
+    def experiment_step_ms(self):
+        return self._expe_step_ms
+
+    @experiment_step_ms.setter
+    def experiment_step_ms(self, value):
+        self._expe_step_ms = value
+
+    def __iter__(self):
+        self.current_time_index = 0
+        for i in self.t_real:
+            time_real = int(self.t_real[self.current_time_index])
+            self.current_time_index += 1
+            self.is_exp_time = time_real in self.t_experiment
+            if self.is_exp_time:
+                self.current_time_exp_index = int(np.where(time_real == self.t_experiment)[0])
+            self.current_time = time_real
+            self.notify()
+            yield time_real
+        
+class Environment(Notifier, Observer):
     """
     Object for controlling environment during experiment
     Usage : inside a time for-loop where P and T can be changed function of current time
@@ -19,11 +96,15 @@ class Environment:
     - time : current time
     - P : pressure
     """
-    def __init__(self, T=20, time=0, P=1e6):
+    def __init__(self, tg:TimeGenerator, T=20, time=0, P=1e6):
+        super().__init__()
+        tg.bind_to(self)
         self.T = T
         self._time = time
         self.P = P
-        self._observers= []
+
+    def update(self, notifier):
+        self.time = notifier.current_time
 
     @property
     def time(self):
@@ -32,14 +113,149 @@ class Environment:
     @time.setter
     def time(self, t):
         self._time = t
-        for callback in self._observers:
-            callback(self._time)
+        self.notify()
+
 
     def bind_to(self, callback):
         self._observers.append(callback)
 
+class TestEnclosure(Observer):
+    def __init__(self, E:Environment, P:np.ndarray, T:np.ndarray, t: TimeGenerator) -> None:
+        self.P = P
+        self.T = T
+        self.t = t
+        E.bind_to(self)
+        self.E = E
+        self._check_len()
+
+    def _check_len(self):
+        if not (len(self.P) == len(self.T) == len(self.t.t_experiment)):
+            raise ValueError("Length of time is not the same than P and T")
+        
+    def update(self, notifier):
+        if self.t.is_exp_time:
+            self.E.P, self.E.T =self.get_env(self.t.current_time_exp_index)
+
+    def get_env(self,index):
+        return (self.P[index], self.T[index])
+
+class Recorder:
+    def __init__(self, test_enclosure:TestEnclosure) -> None:
+        self.recordings = {}
+        self.name_recordings = {}
+        self.snap_time = {}
+        self.TE = test_enclosure
+        # self.config_record(dict_config)
+        # a=1
+
+    def reset(self):
+        """reset all records"""
+        self.recordings = {}
+        self.name_recordings = {}
+        self.snap_time = {}
+
+    def config(self, config_record:Dict):
+        """pass here a dict with {string of variable to catch : string of name you want for the variable}"""
+        for k,v in config_record.items():
+            self.name_recordings[v] = k
+            self.recordings[v] = []
+
+    def autosnap(self, l:Dict):
+        """pass locals of caller to avoid evil use of inspect"""
+        self._base_snap(l)
+
+    def snapshot2(self,d):
+        self._base_snap(d)
+
+    def _base_snap(self, d):
+        self.snap_time.append(self.TE.t.t_experiment)
+        for r in self.recordings.keys():
+            try:
+                self.recordings[r].append(d.get(r, None))
+            except Exception as e :
+                warnings.warn(f"Something went wrong during snapping for varaible {r}")
+
+from math import pi, asin
+
+class Membrane(Observer, Notifier):
+    """
+        Sensor membrane : (formulas from wikipedia and Capteurs : Pressions, accélération et forces à pont de Wheastone, Jean Louis Rouvet - Giacintec)
+            Simulate membrane sensor for input pressure
+            - Use compute_force to get the force applied on the surface
+            - Use compute_def_z to get z displacement
+            - Use get_def_x to get x elongation.
+
+        Params :
+            - E : environment object
+            - EIgz : Young modulus x Igz
+            - diameter : diameter of the membrane
+            - P_calib : static pressure on the other side of the membrane
+            - e : thickness (m) (default : 1e-5)
+            - Y : young modulus (Pa)
+            - alpha : time inertia coefficient (simulate delay)
+
+    """
+    # https://fr.wikipedia.org/wiki/Th%C3%A9orie_des_poutres
+    def __init__(self,E:Environment , EIgz, diameter, P_calib, e = 1e-5, Y = 130e9, alpha = 0.4):
+        super().__init__()
+        E.bind_to(self)
+        self.E = E
+        self.Y = Y
+        self.EIgz = EIgz
+        self.S = (diameter/2)**2 *pi
+        self.L = diameter
+        self.dL = 0
+        self.F = 0
+        self.epais = e
+        self.P_calib = P_calib
+        self._L_def = diameter
+        self.alpha = alpha
+
+    @property
+    def L_def(self):
+        return self._L_def
+    
+    @L_def.setter
+    def L_def(self, value):
+        self._L_def = value
+        self.dL = value - self.L
+        self.notify()
+
+    def compute_force(self):
+        self.F = (self.E.P-self.P_calib)/self.S
+
+    def compute_def_z(self,x=None):
+        if x == None :
+            x = self.L/2
+            # out = 
+        return  3*(self.E.P- self.P_calib) * ( 1 - 0.4**2 ) / (16 * self.Y*self.epais**3  ) * (self.L/2)**4
+        # return 1/self.EIgz * (self.F/12*(x)**3-self.F*self.L**2*(x)/16)
+
+    def check_state(self):
+        return (self.L_def-self.L)/self.L
+
+    def compute_def_x(self,):
+        """
+        
+        """
+        y = self.compute_def_z()
+
+        L_def = 2*(y**2+self.L**2/4)**.5
+        L_def *= (1+ 0.409e-6 + 0.686e-9*self.E.T)
+        self.L_def = self.alpha*self.L_def + (1-self.alpha)*L_def
+        return self.L_def
+
+    def get_def_x(self):
+        self.compute_force()
+        return self.compute_def_x()
+    
+
+    def update(self,notifier):
+        _ = self.get_def_x()
+
+
 # Definition des objets du tp
-class Resistance:
+class Resistance(Observer):
     """
     Object Resistance : simulate a electrical resistance with noise, temperature and strength effect
     The resistance can be used as a classical resistance or attached to an object to measure deformation.
@@ -54,42 +270,55 @@ class Resistance:
     - alpha : temperature effect
     """
 
-    def __init__(self, E, R, L = 1e-2 , K=2, quality="good", alpha=0.0002): 
+    def __init__(self, E:Environment, R, L = 1e-2 , K=2, quality="good", alpha=0.0002): 
         d_quality = {"normal": 1e-2,"good" : 1e-3, "high" : 1e-4}
         if quality in d_quality:
             self.eps = d_quality[quality]
         else:
             self.eps = 1e-3
+        E.bind_to(self)
         self.E = E
         self.R = R
-        self.T = E.T 
+        self._resistance = R
+        # self.T = E.T 
         self.L = L 
         self.dL = 0 
         self.membrane = None
         self.side = None
         self.K = K # typiquement 2 pour les métaux, 200 pour les piezo 
         self.alpha = alpha # tres petit ( 0.000009 à 0.00002 ohm/(ohm degC) ou 9 à 20 ppm/ degC) est par  exemple  un  choix  judicieux  par  rapport  au  cuivre  ( 0.0043  ohm/(ohm degC)  ou  4 300 ppm/ degC) 
-        
+
+    @property
+    def resistance(self):
+        return self._resistance
+    
+    @resistance.setter
+    def resistance(self, value):
+        self._resistance = value
+    
     def compute_R(self):
         return self.R * (1 + self.dL/self.L *self.K) * (1 + self.alpha * self.E.T)*(1 + self.eps*(2*random()-1) )
     
     def set_deformation(self, dL): 
         self.dL = dL 
 
-    def attach_membrane(self, membrane, side):
+    def attach_membrane(self, membrane:Membrane, side):
         """
         Attach resistance to an existing Paroi object.
         Params : 
             - membrane : membrane object
             - side : side of the membrane (1 or -1)
         """
+        membrane.bind_to(self)
         self.membrane = membrane
         self.side = side
         self.L = membrane.L
     
     # def set_environnement(self, T): 
     #     self.T = T 
-    
+    def update(self, notifier: Notifier) -> None:
+        self.resistance = self.get_resistance()
+
     def get_resistance(self): 
         """
         Get resistance value
@@ -97,8 +326,13 @@ class Resistance:
             - No params
         """
         if self.membrane != None:
-            self.set_deformation( self.side*(self.membrane.get_def_x()-self.membrane.L))
+            self.set_deformation( self.side*(self.membrane.dL))
         return self.compute_R() 
+    
+    def __call__(self):
+        return self.resistance
+
+
 
 class Generateur:
     """
@@ -118,7 +352,7 @@ class Generateur:
 
 
 
-class Horloge: 
+class Horloge(Observer, Notifier): 
     """
         This object is simulating a clock.
         Usage : declare it and link it with your environment object
@@ -131,17 +365,17 @@ class Horloge:
             - granularity_env_time : granularity of the time in the environmnent object (ex: your step time is 0.1 sec)
     """
 
-    def __init__(self, E, frequence, granularity_env_time):
+    def __init__(self, E:Environment, frequence, granularity_env_time):
         self.E = E
-        self.E.bind_to(self.update_time)
+        self.E.bind_to(self)
         self.frequence = frequence
-        self.tf_s = 1/frequence*granularity_env_time
+        self.tf_s = 1/frequence #*granularity_env_time
         self.factor = granularity_env_time
         self.value = False
         self._time = 0
    
-    def update_time(self, time):
-        self._time = time*self.factor
+    def update(self, notifier):
+        self._time = notifier.time/self.factor
         self.update_clock()
 
     @property
@@ -188,6 +422,9 @@ class EchantillonneurBloqueur:
         self.multiple = multiple
         self.v_bloquee = v_entree
 
+    def update(self, notifier):
+        self.get_echantillon()
+
     def get_echantillon(self, v_entree):
         """
         get blocked value of your v_entree (input signal)
@@ -202,6 +439,8 @@ class EchantillonneurBloqueur:
             self.v_bloquee = v_entree
             self.count = 0
         return self.v_bloquee
+    
+    __call__ = get_echantillon
 
 
 class CanCompare():
@@ -213,7 +452,7 @@ class CanCompare():
 
     Params : 
         - horloge : clock (horloge) object of your experiment
-        - resolution : resolution f your CAN
+        - resolution : resolution for your CAN
         - v_alim : voltage working range of the CAN
 
 
@@ -235,6 +474,7 @@ class CanCompare():
         self.quantum = v_alim / (2**resolution)
         self.nb = 1
         self.qs = 0b0
+        self.v = v_alim
 
 
     def compare(self, v_m ):
@@ -256,9 +496,20 @@ class CanCompare():
     
     def get_v_numerisee(self):
         if self.nb > self.resolution:
-            return self.qs * self.quantum
+            self.v = self.qs * self.quantum
+            return self.v
         else:
-            return None
+            return self.v
+        
+    @property
+    def out(self):
+        return self.get_v_numerisee()
+    
+    @property
+    def internal(self):
+        return self.get_v_numerisee_courante()
+    
+    __call__ = compare
 
 
 class Cpu():

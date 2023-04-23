@@ -1,14 +1,14 @@
 import pytest
-import sys
-import os
-from pathlib import Path
+# import sys
+# import os
+# from pathlib import Path
 
-here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-p = Path(here)
-pp = p / "src" #/"sensorsim"
-print(pp.resolve())
-sys.path.insert(0, str(pp.resolve()))
-print(sys.path)
+# here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# p = Path(here)
+# pp = p / "src" #/"sensorsim"
+# print(pp.resolve())
+# sys.path.insert(0, str(pp.resolve()))
+# print(sys.path)
 
 
 
@@ -44,8 +44,7 @@ def test_horloge(env):
     
     assert 1==1
 
-from sensorsim.montages import Membrane
-from sensorsim.instruments import Environment, Resistance
+from sensorsim.instruments import Environment, Resistance, Membrane
 
 @pytest.mark.unit_test
 def test_horloge(env):
