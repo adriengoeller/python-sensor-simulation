@@ -143,6 +143,7 @@ class Recorder:
     def __init__(self, E:Environment) -> None:
         self.recordings = {}
         self.name_recordings = {}
+        self._config_plot = {}
         self.snap_time = []
         self.E = E
         # self.config_record(dict_config)
@@ -154,7 +155,7 @@ class Recorder:
         self.name_recordings = {}
         self.snap_time = {}
 
-    def config(self, config_record:Dict):
+    def config_name(self, config_record:Dict):
         """pass here a dict with {string of variable to catch : string of name you want for the variable}"""
         for k,v in config_record.items():
             self.name_recordings[v] = k
@@ -164,7 +165,7 @@ class Recorder:
         """pass locals of caller to avoid evil use of inspect"""
         self._base_snap(l)
 
-    def snapshot2(self,d):
+    def snapshot(self,d):
         self._base_snap(d)
 
     def _base_snap(self, d):
@@ -174,6 +175,51 @@ class Recorder:
                 self.recordings[r].append(d.get(r, None))
             except Exception as e :
                 warnings.warn(f"Something went wrong during snapping for varaible {r}")
+    
+    @property
+    def config_plot(self):
+        return self._config_plot
+    
+    @config_plot.setter
+    def config_plot(self,value):
+        for i in self.name_recordings.keys():
+            self.config_plot[i] = value.get(i,None)
+
+    def plot(self, graph_record_map):
+        r_list =[]
+        title_list = []
+        type_list = []
+
+        h=0
+        for k,v in graph_record_map.items():
+            h+=1
+            if isinstance(v,list):
+                rl=[]
+                til = []
+                tyl = []
+                for l in v:
+                    rl.append(self.recordings[l])
+                    til.append(self.name_recordings[l])
+                    tyl.append(self.config_plot[l])
+                r_list.append(rl)
+                title_list.append(tuple(til))
+                type_list.append(tyl)
+            else:
+                r_list.append(self.recordings[v])
+                title_list.append(self.name_recordings[v])
+                type_list.append(self.config_plot[v])
+
+        self.fig = make_plot(
+            t=self.snap_time,
+            list_y=r_list,
+            titles=tuple(title_list),
+            graph_type=type_list,
+            height=h*300
+        )
+        self.fig.show()
+
+
+
 
 from math import pi, asin
 

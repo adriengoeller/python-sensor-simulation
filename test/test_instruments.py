@@ -41,30 +41,15 @@ def test_enclosure():
  
 @pytest.mark.unit_test
 def test_recorders():
-    
-    # dict_record = {"a":"var a", "b":"var b", "c":"var c"}
-    # tg = TimeGenerator(10, 1000, 10)
-    # # - Pression :
-    # # la pression est paramétrée pour aller de p1 à p2
-    # simu_P = np.linspace(1e5, 1e6 , tg.get_time_second) 
-
-    # # - Température :
-    # simu_T = np.ones(tg.get_time_second)*20
-
 
     E = Environment()
-    # TE = TestEnclosure(E, simu_P, simu_T, tg)
-
-
 
     r = Recorder(E)
     a = 1
     b=2
     d = {"a":a, "b":b}
     r.snapshot2(d)
-
     assert r.recordings== {}
-
 
     r.config({"var a":"a", "var b":"b"})
     r.snapshot2(d)
@@ -79,9 +64,19 @@ def test_recorders():
     assert r.recordings["a"] == [1,3,11]
     assert r.recordings["b"] == [2,None,]
 
-    # c=1
-    # d = {"var a":a, "var b":b, "var c":c}
-    # r.snapshot2(d)
+@pytest.mark.unit_test
+def test_recorders_plot():
+    tg = TimeGenerator(2, 1000, 100)
+    E = Environment(tg)
+    r = Recorder(E)
+    r.config_name({"time":"tt", "time2":"tt2", "time3":"tt3"})
+    for tt in tg:
+        r.snapshot({"tt":tt,"tt2":tt/100,"tt3":1-1/(tt**2+1)})
+    
+    a=1
+    r.config_plot = {"tt":True,"tt2":False,"tt3":True}
+    r.plot({1:"tt",2:["tt2","tt3"]})
+
 
 @pytest.mark.unit_test
 def test_clock_with_numeric_stack():
