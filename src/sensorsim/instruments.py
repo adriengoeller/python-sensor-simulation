@@ -140,11 +140,11 @@ class TestEnclosure(Observer):
         return (self.P[index], self.T[index])
 
 class Recorder:
-    def __init__(self, test_enclosure:TestEnclosure) -> None:
+    def __init__(self, E:Environment) -> None:
         self.recordings = {}
         self.name_recordings = {}
-        self.snap_time = {}
-        self.TE = test_enclosure
+        self.snap_time = []
+        self.E = E
         # self.config_record(dict_config)
         # a=1
 
@@ -168,7 +168,7 @@ class Recorder:
         self._base_snap(d)
 
     def _base_snap(self, d):
-        self.snap_time.append(self.TE.t.t_experiment)
+        self.snap_time.append(self.E.time)
         for r in self.recordings.keys():
             try:
                 self.recordings[r].append(d.get(r, None))
