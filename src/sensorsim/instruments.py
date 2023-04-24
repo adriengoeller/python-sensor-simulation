@@ -190,7 +190,13 @@ class Recorder:
                 warnings.warn(f"Something went wrong during snapping for varaible {r}")
     
 
-    def plot(self, graph_record_map):
+    def plot(self, graph_record_map:Dict):
+        """
+        provide a dictionnary to define plot
+        Ex:  graph_record_map={1:'P', 2:['R1','R2']} will display two graphs
+        - the first with the variables recorded as 'P' id
+        - the second with both 'R1' and 'R2' recorded values
+        """
         r_list =[]
         title_list = []
         type_list = []
