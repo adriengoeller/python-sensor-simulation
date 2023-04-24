@@ -52,7 +52,7 @@ def test_loop():
     R4.attach_membrane(membrane,-1)
     R3.attach_membrane(membrane,1)
 
-    W = montages.Wheastone(R1, R2, R3, R4)
+    wheastone = montages.Wheastone(R1, R2, R3, R4)
 
     # Resistances gain
 
@@ -112,7 +112,7 @@ def test_loop():
 
     for tt in tg:
         print(tt, env.time, h.value)
-        V_mesure = W.wheastone(gen())
+        V_mesure = wheastone(gen())
         V_gain = montages.montage_ampli_op(gen_ao(), V_mesure, R1_ao(), R2_ao(), R3_ao(), R4_ao())
         vb=EB(V_gain)
         can(vb)

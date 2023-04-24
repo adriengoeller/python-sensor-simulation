@@ -155,7 +155,7 @@ class Recorder:
         self.name_recordings = {}
         self.snap_time = {}
 
-    def config(self, config_record:Dict[str,List[str,bool]]):
+    def config(self, config_record:Dict[str,List]):
         """pass here a dict with {variable id (str) (real name of variable) : [name you want in graph (str), bool of type graph (see config_plot)]}"""
         for k,v in config_record.items():
             self.name_recordings[k] = v[0]

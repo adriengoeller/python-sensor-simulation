@@ -16,6 +16,7 @@ class Wheastone:
     def wheastone(self, V_0):
         Vs = V_0 * (self.R4()/(self.R1()+self.R4())-self.R3()/(self.R2()+self.R3()))
         return Vs
+    __call__=wheastone
 
 def montage_ampli_op(V1,V2,R1,R2,R3,R4):
 
