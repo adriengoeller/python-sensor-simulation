@@ -5,7 +5,7 @@ This module provides all the instruments
 from abc import ABC, abstractmethod
 from random import random
 from math import pi, asin
-from typing import Dict
+from typing import Dict, List
 import warnings
 from numpy import ndarray
 import numpy as np
@@ -143,7 +143,7 @@ class Recorder:
     def __init__(self, E:Environment) -> None:
         self.recordings = {}
         self.name_recordings = {}
-        self._config_plot = {}
+        self.type_plot = {}
         self.snap_time = []
         self.E = E
         # self.config_record(dict_config)
@@ -155,17 +155,30 @@ class Recorder:
         self.name_recordings = {}
         self.snap_time = {}
 
-    def config_name(self, config_record:Dict):
-        """pass here a dict with {string of variable to catch : string of name you want for the variable}"""
+    def config(self, config_record:Dict[str,List[str,bool]]):
+        """pass here a dict with {variable id (str) (real name of variable) : [name you want in graph (str), bool of type graph (see config_plot)]}"""
         for k,v in config_record.items():
-            self.name_recordings[v] = k
-            self.recordings[v] = []
+            self.name_recordings[k] = v[0]
+            self.type_plot[k] = v[1]
+            self.recordings[k] = []
+
+    def config_name(self, config_record:Dict):
+        """pass here a dict with {variable id (str) (real name of variable) : name you want in graph (str)}"""
+        for k,v in config_record.items():
+            self.name_recordings[k] = v
+            self.recordings[k] = []
+
+    def config_plot(self,config_graph_type:Dict[str,bool]):
+        """pass here a dict with {variable id (str) (real name of variable) : True/False} with True for numeric value and False for analogic """
+        for i in self.name_recordings.keys():
+            self.type_plot[i] = config_graph_type.get(i,None)
 
     def autosnap(self, l:Dict):
         """pass locals of caller to avoid evil use of inspect"""
         self._base_snap(l)
 
-    def snapshot(self,d):
+    def snapshot(self, d:Dict):
+        """pass here a dict of {variable id (str) (real name of variable) : value to save}"""
         self._base_snap(d)
 
     def _base_snap(self, d):
@@ -176,14 +189,6 @@ class Recorder:
             except Exception as e :
                 warnings.warn(f"Something went wrong during snapping for varaible {r}")
     
-    @property
-    def config_plot(self):
-        return self._config_plot
-    
-    @config_plot.setter
-    def config_plot(self,value):
-        for i in self.name_recordings.keys():
-            self.config_plot[i] = value.get(i,None)
 
     def plot(self, graph_record_map):
         r_list =[]
@@ -200,14 +205,14 @@ class Recorder:
                 for l in v:
                     rl.append(self.recordings[l])
                     til.append(self.name_recordings[l])
-                    tyl.append(self.config_plot[l])
+                    tyl.append(self.type_plot[l])
                 r_list.append(rl)
                 title_list.append(tuple(til))
                 type_list.append(tyl)
             else:
                 r_list.append(self.recordings[v])
                 title_list.append(self.name_recordings[v])
-                type_list.append(self.config_plot[v])
+                type_list.append(self.type_plot[v])
 
         self.fig = make_plot(
             t=[l/1000 for l in self.snap_time],
@@ -423,7 +428,8 @@ class Horloge(Observer, Notifier):
         self._time = 0
    
     def update(self, notifier):
-        self._time = notifier.time #/self.factor
+        self._time = notifier.time #/self.factor 
+        # warning, in second, the entiere div is performed on decimals, which led to important errors. we decide to stay in mseconds and get only int.
         self.update_clock()
 
     @property
@@ -578,16 +584,18 @@ class Cpu():
     """
 
 
-    def __init__(self,E):
+    def __init__(self,E:Environment,h:Horloge):
         self.E = E
+        self.h = h
         self.value_can = 0
         self.time = E.time
         self.pression = 0
         self.coefficient_correction = reg = [ 94.95021929  ,-626.54622693,  2315.98491463, 10241.5233834,22504.35066598]
 
-    def check_value(self, value_eb, value_can):
+    def check_value(self, value_can):
 
-        if value_eb:
+        
+        if self.h.get_pulse():
             self.time = self.E.time
         if value_can is not None:
             self.value_can = value_can
@@ -631,6 +639,8 @@ class Cpu():
 
     def compute(self):
         self.altitude = 288.15/0.0065*(1-(self.pression/1.013e5)**(1/5.255))
+
+    __call__ = check_value
         
 
 

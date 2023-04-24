@@ -69,7 +69,7 @@ def test_loop():
     can = instruments.CanCompare(h, 8, 5) # 8 bits / 5V alim
 
     # CPU
-    cpu = instruments.Cpu(env)
+    cpu = instruments.Cpu(env,h)
 
     # init recorder
 
@@ -78,6 +78,7 @@ def test_loop():
         {
             "P":"P",
             "T":"T",
+            "M":"Membrane",
             "V_mesure":"V_mesure",
             "V_gain":"V_gain",
             "vb":"vb",
@@ -85,15 +86,17 @@ def test_loop():
             "R2":"R2",
             "R3":"R3",
             "R4":"R4",
-            "horloge":"hh",
+            "hh":"horloge",
             "EB":"EB",
-            "can output":"cout",
-            "can internal":"cint"
+            "cout":"can output",
+            "cint":"can internal",
+            "cpu":"cpu"
         }
     )
-    r.config_plot ={
+    r.config_plot ({
             'P': False,
             'T': False,
+            "Membrane":False,
             'V_mesure': False,
             'V_gain': False,
             'vb': False,
@@ -104,7 +107,8 @@ def test_loop():
             'hh': True,
             'EB': True,
             'cout': True,
-            'cint': True}
+            'cint': True,
+            "cpu":True})
 
     for tt in tg:
         print(tt, env.time, h.value)
@@ -112,10 +116,12 @@ def test_loop():
         V_gain = montages.montage_ampli_op(gen_ao(), V_mesure, R1_ao(), R2_ao(), R3_ao(), R4_ao())
         vb=EB(V_gain)
         can(vb)
+        cpu(can.out)
 
         snp = {        
             "P":env.P,
             "T":env.T,
+            "M":membrane.L_def,
             "V_mesure":V_mesure,
             "V_gain":V_gain,
             "vb":vb,
@@ -126,12 +132,13 @@ def test_loop():
             "hh":h.value,
             "EB":vb,
             "cout":can.out,
-            "cint":can.internal}
+            "cint":can.internal,
+            "cpu":cpu.altitude}
 
         r.snapshot(snp)
 
     r.plot(
         {
-            1:"P",2:"T",3:["V_mesure","V_gain"],4:["R3","R4"],5:["cint","cout","EB"], 6:"hh"
+            1:"P",2:"T",7:"M",3:["V_mesure","V_gain"],4:["R3","R4"],5:["cint","cout","EB"], 6:"hh",8:"cpu"
         }
     )
