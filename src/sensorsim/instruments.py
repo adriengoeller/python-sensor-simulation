@@ -140,11 +140,12 @@ class TestEnclosure(Observer):
         return (self.P[index], self.T[index])
 
 class Recorder:
-    def __init__(self, E:Environment) -> None:
+    def __init__(self, E:Environment, title_recorder:str="Recorder graphs") -> None:
         self.recordings = {}
         self.name_recordings = {}
         self.type_plot = {}
         self.snap_time = []
+        self.title_graph=title_recorder
         self.E = E
         # self.config_record(dict_config)
         # a=1
@@ -223,6 +224,7 @@ class Recorder:
         self.fig = make_plot(
             t=[l/1000 for l in self.snap_time],
             list_y=r_list,
+            title_text=self.title_graph,
             titles=tuple(title_list),
             graph_type=type_list,
             height=h*300
@@ -421,14 +423,14 @@ class Horloge(Observer, Notifier):
         Params : 
             - E : environment object
             - frequence : frequency
-            - granularity_env_time : granularity of the time in the environmnent object (ex: your step time is 0.1 sec)
+            - granularity_env_time : granularity of the time in the environmnent object (ex: if you use TimeGenerator, it is in ms so you put here 1000 : 1000ms = 1s)
     """
 
-    def __init__(self, E:Environment, frequence, granularity_env_time):
+    def __init__(self, E:Environment, frequence, granularity_env_time=1000):
         self.E = E
         self.E.bind_to(self)
         self.frequence = frequence
-        self.tf_s = 1/frequence *granularity_env_time
+        self.tf_s = 1/frequence *granularity_env_time / 2 # /2 to switch two time at 1/freq
         self.factor = granularity_env_time
         self.value = False
         self._time = 0
@@ -456,7 +458,8 @@ class Horloge(Observer, Notifier):
         """
         return True if there is a change level
         """
-        return self.pulse_clock
+        # return self.pulse_clock
+        return self.value
 
 
     def get_clock(self):
@@ -478,9 +481,10 @@ class EchantillonneurBloqueur:
     """
     def __init__(self, horloge, multiple, v_entree=0):
         self.horloge = horloge
-        self.count = multiple
+        self.count = 0 #multiple
         self.multiple = multiple
         self.v_bloquee = v_entree
+        self.signal=False
 
     def update(self, notifier):
         self.get_echantillon()
@@ -491,14 +495,25 @@ class EchantillonneurBloqueur:
         Params :
             - v_entree : input signal to block
         """
-        if self.horloge.get_pulse() :
+        if self.horloge.get_pulse() and self.signal is False:
             self.count += 1
         else:
             pass        
         if self.count >= self.multiple :
             self.v_bloquee = v_entree
             self.count = 0
+        self.signal = self.horloge.get_pulse()
         return self.v_bloquee
+    # def get_echantillon(self, v_entree):
+    #     """
+    #     get blocked value of your v_entree (input signal)
+    #     Params :
+    #         - v_entree : input signal to block
+    #     """
+    #     if self.horloge.get_pulse() is True and self.count is False :
+    #         self.v_bloquee = v_entree
+    #     self.count = self.horloge.get_pulse()
+    #     return self.v_bloquee
     
     __call__ = get_echantillon
 
@@ -535,18 +550,23 @@ class CanCompare():
         self.nb = 1
         self.qs = 0b0
         self.v = v_alim
+        self.check_v_change = v_alim
+        self.check_clock_change=False
 
 
     def compare(self, v_m ):
-        if self.horloge.get_pulse():
-            self.qs = 0
-            self.nb = 1
-        if self.nb <= self.resolution:
-            if ( (self.qs + (1 << (self.resolution - self.nb) )) * self.quantum ) < v_m:
-                self.qs +=  (1 << (self.resolution - self.nb) )
-            else:
-                pass
-            self.nb += 1
+        if self.horloge.get_pulse() is True and self.check_clock_change is False:
+            if self.check_v_change != v_m:
+                self.check_v_change = v_m
+                self.qs = 0
+                self.nb = 1
+            if self.nb <= self.resolution:
+                if ( (self.qs + (1 << (self.resolution - self.nb) )) * self.quantum ) < v_m:
+                    self.qs +=  (1 << (self.resolution - self.nb) )
+                else:
+                    pass
+                self.nb += 1
+        self.check_clock_change = self.horloge.get_pulse()
 
     def get_bytes(self):
         return self.qs

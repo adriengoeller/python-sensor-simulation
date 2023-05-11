@@ -80,19 +80,34 @@ def test_recorders_plot():
 
 @pytest.mark.unit_test
 def test_clock_with_numeric_stack():
+    tg = TimeGenerator(6, 1000, 5)
+    E = Environment(tg)
+
+    h = Horloge(E, 100, 1000)
+
+    EB = EchantillonneurBloqueur(h, 10)
+
+    CAN = CanCompare(h, 8, 10)
+
+    for tt in tg:
+        vb=EB(tt/100)
+        CAN(vb)
+        h1 = h.value
+        if E.time % h.tf_s == 0:
+            h.value != h1
+        print(E.time, h.value, vb, CAN.internal, CAN.out, CAN.nb)
+
+@pytest.mark.unit_test
+def test_can_with_numeric_stack():
     tg = TimeGenerator(6, 1000, 10)
     E = Environment(tg)
 
     h = Horloge(E, 10, 1000)
 
-    EB = EchantillonneurBloqueur(h, 2)
+    # EB = EchantillonneurBloqueur(h, 5)
 
     CAN = CanCompare(h, 10, 5)
-
     for tt in tg:
-        vb=EB(tt/1000)
-        CAN(vb)
-        h1 = h.value
-        if E.time % h.tf_s == 0:
-            h.value != h1
-        print(E.time, h.value, vb, CAN.internal, CAN.out)
+        
+        CAN(4.5)
+        print(E.time, h.value, CAN.internal, CAN.out)

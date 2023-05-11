@@ -8,6 +8,18 @@ This module provides some classical electronic circuits as functions and the sen
 
 
 class Wheastone:
+    """
+    Object Wheastone : simulate wheastone bridge
+    
+    Params:
+    - R1,R2,R3,R4: the 4 resistances of the bridge. Several resistances can be sensitive or not.
+
+    You can after initialization use it but you have to give a generator in input.
+    Ex: 
+    gen = a generator object initialisation
+    w = Wheastone(R1,R2,R3,R4) # initialisation
+    value = w(gen())
+    """
     def __init__(self,R1,R2,R3,R4) -> None:
         self.R1 = R1
         self.R2 = R2
