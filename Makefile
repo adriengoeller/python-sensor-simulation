@@ -9,3 +9,9 @@ python -m venv .venv3.8
  py -m pip install build
 
  py -m build --sdist
+
+ ####
+ 
+
+ pip wheel -r requirements.txt
+ python -m setup.py bdist_wheel
