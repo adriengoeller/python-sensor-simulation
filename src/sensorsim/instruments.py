@@ -325,12 +325,12 @@ class Resistance(Observer):
     - E : environement object
     - R : resistance value in ohms
     - K : jauge effect parameter
-    - quality : quality of resistance in terms of noise : {"normal": 1e-2,"good" : 1e-3, "high" : 1e-4}
+    - quality : quality of resistance in terms of noise : {"bad": 1e-2,"normal": 1e-3, "good": 1e-4, "high": 1e-5, "extra": 1e-6}
     - alpha : temperature effect
     """
 
     def __init__(self, E:Environment, R, L = 1e-2 , K=2, quality="good", alpha=0.0002): 
-        d_quality = {"normal": 1e-2,"good" : 1e-3, "high" : 1e-4}
+        d_quality = {"bad": 1e-2,"normal": 1e-3, "good": 1e-4, "high": 1e-5, "extra": 1e-6}
         if quality in d_quality:
             self.eps = d_quality[quality]
         else:
